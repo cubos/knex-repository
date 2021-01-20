@@ -3,6 +3,7 @@ import { randomBytes } from "crypto";
 import Knex from "knex";
 
 import { BaseRepository } from "../src";
+import type { BaseModel } from "../src/BaseRepository";
 
 const knexConfig = {
   client: "pg",
@@ -35,7 +36,7 @@ describe("BaseRepository", () => {
       table.text("name");
     });
 
-    interface Something {
+    interface Something extends BaseModel {
       name: string;
     }
 

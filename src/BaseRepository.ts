@@ -1,12 +1,16 @@
 import type Knex from "knex";
 
-interface BaseFields {
+export interface BaseModel {
   id: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export class BaseRepository<T extends object> {
+type Insert<T extends BaseModel> = Omit<T, "createdAt" | "updatedAt"> & { id?: T["id"] };
+type Filter<T extends BaseModel> = Partial<Omit<T, "createdAt" | "updatedAt">>;
+type Update<T extends BaseModel> = Filter<T> & { id: T["id"] };
+
+export class BaseRepository<T extends BaseModel> {
   constructor(private readonly knex: Knex, private readonly tableName: string) {}
 
   static async createTable(
@@ -36,7 +40,7 @@ export class BaseRepository<T extends object> {
   }
 
   private select(knex?: Knex.Transaction) {
-    return (knex ?? this.knex)<T & { id: string }>(this.tableName).select();
+    return (knex ?? this.knex)<T>(this.tableName).select();
   }
 
   /**
@@ -45,7 +49,7 @@ export class BaseRepository<T extends object> {
    * @param item objeto a ser inserido
    * @returns instância do objeto criado
    */
-  async insert(item: T & { id?: string }) {
+  async insert(item: Insert<T>) {
     const now = new Date();
 
     const [result] = (await this.knex(this.tableName)
@@ -55,7 +59,7 @@ export class BaseRepository<T extends object> {
         createdAt: now,
         updatedAt: now,
       })
-      .returning("*")) as Array<T & BaseFields>;
+      .returning("*")) as T[];
 
     return result;
   }
@@ -66,7 +70,7 @@ export class BaseRepository<T extends object> {
    * @param items objetos a serem inseridos
    * @returns instância dos objetos criados
    */
-  async insertAll(items: Array<T & { id?: string }>) {
+  async insertAll(items: Array<Insert<T>>) {
     return this.knex.transaction(async trx => {
       const repo = this.withTransaction(trx);
 
@@ -81,8 +85,8 @@ export class BaseRepository<T extends object> {
    * @param queryBuilder callback síncrono possibilitando adicionar mais parâmetros na condição de busca
    * @returns instância do objeto ou undefined se não encontrado
    */
-  async findOneBy(condition: Partial<T & { id: string }>, queryBuilder: (qb: Knex.QueryBuilder<T & BaseFields>) => unknown = () => undefined) {
-    return this.select().where(condition).where(queryBuilder).first() as Promise<(T & BaseFields) | undefined>;
+  async findOneBy(condition: Filter<T>, queryBuilder: (qb: Knex.QueryBuilder<T>) => unknown = () => undefined) {
+    return this.select().where(condition).where(queryBuilder).first() as Promise<T | undefined>;
   }
 
   /**
@@ -94,19 +98,14 @@ export class BaseRepository<T extends object> {
    * @param queryBuilder callback síncrono possibilitando adicionar mais parâmetros na condição de busca
    * @returns objeto contendo o resultado e configurações da pesquisa
    */
-  async findAllPaginated(
-    page = 1,
-    pageSize = 10,
-    condition: Partial<T & { id: string }> = {},
-    queryBuilder: (qb: Knex.QueryBuilder<T & BaseFields>) => unknown = () => undefined,
-  ) {
+  async findAllPaginated(page = 1, pageSize = 10, condition: Filter<T> = {}, queryBuilder: (qb: Knex.QueryBuilder<T>) => unknown = () => undefined) {
     const rowCount = await this.count(condition, queryBuilder);
 
     const result = (await this.select()
       .where(condition)
       .where(queryBuilder)
       .limit(pageSize)
-      .offset((page - 1) * pageSize)) as Array<T & BaseFields>;
+      .offset((page - 1) * pageSize)) as T[];
 
     return {
       data: result,
@@ -124,7 +123,7 @@ export class BaseRepository<T extends object> {
    * @param queryBuilder callback síncrono possibilitando adicionar mais parâmetros na condição de busca
    * @returns contagem de objetos
    */
-  async count(condition: Partial<T & { id: string }> = {}, queryBuilder: (qb: Knex.QueryBuilder<T & BaseFields>) => unknown = () => undefined) {
+  async count(condition: Filter<T> = {}, queryBuilder: (qb: Knex.QueryBuilder<T>) => unknown = () => undefined) {
     const query = this.select().where(condition).where(queryBuilder).count({ count: 1 }).first();
 
     return parseInt(((await query)?.count ?? "0").toString(), 10);
@@ -136,7 +135,7 @@ export class BaseRepository<T extends object> {
    * @returns array com a instância dos objetos
    */
   async findAll() {
-    return this.select() as Promise<Array<T & BaseFields>>;
+    return this.select() as Promise<T[]>;
   }
 
   /**
@@ -146,8 +145,8 @@ export class BaseRepository<T extends object> {
    * @param queryBuilder callback síncrono possibilitando adicionar mais parâmetros na condição de busca
    * @returns array com a instância dos objetos encontrados
    */
-  async findBy(condition: Partial<T & { id: string }> = {}, queryBuilder: (qb: Knex.QueryBuilder<T & BaseFields>) => unknown = () => undefined) {
-    return this.select().where(condition).where(queryBuilder) as Promise<Array<T & BaseFields>>;
+  async findBy(condition: Filter<T> = {}, queryBuilder: (qb: Knex.QueryBuilder<T>) => unknown = () => undefined) {
+    return this.select().where(condition).where(queryBuilder) as Promise<T[]>;
   }
 
   /**
@@ -157,8 +156,8 @@ export class BaseRepository<T extends object> {
    * @param {Date} date opcionalmente uma data para realizar consultas na tabela de histórico
    * @returns {(Promise<T | undefined>)} instância do objeto ou undefined se não encontrado
    */
-  async get(id: string): Promise<T | undefined> {
-    return this.findOneBy({ id } as Partial<T & { id: string }>);
+  async get(id: T["id"]): Promise<T | undefined> {
+    return this.findOneBy({ id } as Filter<T>);
   }
 
   /**
@@ -168,14 +167,14 @@ export class BaseRepository<T extends object> {
    * @returns  objeto atualizado
    * @throws NotFound
    */
-  async update(item: Partial<T> & { id: string }): Promise<T & BaseFields> {
+  async update(item: Update<T>): Promise<T> {
     const [updatedItem] = (await this.knex(this.tableName)
       .where({ id: item.id })
       .update({
         ...item,
         updatedAt: new Date(),
       })
-      .returning("*")) as Array<(T & BaseFields) | undefined>;
+      .returning("*")) as Array<T | undefined>;
 
     if (!updatedItem) {
       throw new Error("Not found");
@@ -191,8 +190,8 @@ export class BaseRepository<T extends object> {
    * @returns objeto excluído
    * @throws NotFound
    */
-  async delete(id: string) {
-    const [deleted] = (await this.knex(this.tableName).where({ id }).delete().returning("*")) as Array<(T & BaseFields) | undefined>;
+  async delete(id: T["id"]) {
+    const [deleted] = (await this.knex(this.tableName).where({ id }).delete().returning("*")) as Array<T | undefined>;
 
     if (!deleted) {
       throw new Error("Not found");
@@ -207,8 +206,8 @@ export class BaseRepository<T extends object> {
    * @param condition parâmetros dos objetos a serem utilizadas na condição de busca
    * @returns objetos excluídos
    */
-  async deleteBy(condition: Partial<T & { id: string }> = {}, queryBuilder: (qb: Knex.QueryBuilder<T & BaseFields>) => unknown = () => undefined) {
-    return (await this.knex(this.tableName).where(condition).where(queryBuilder).delete().returning("*")) as Array<T & BaseFields>;
+  async deleteBy(condition: Filter<T> = {}, queryBuilder: (qb: Knex.QueryBuilder<T>) => unknown = () => undefined) {
+    return (await this.knex(this.tableName).where(condition).where(queryBuilder).delete().returning("*")) as T[];
   }
 
   /**
