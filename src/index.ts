@@ -1,1 +1,1 @@
-export { BaseRepository } from "./BaseRepository";
+export { BaseRepository, BaseModel } from "./BaseRepository";
