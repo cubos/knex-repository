@@ -1,4 +1,5 @@
 import type Knex from "knex";
+import * as uuid from "uuid";
 
 export interface BaseModel {
   id: string;
@@ -54,7 +55,7 @@ export class BaseRepository<T extends BaseModel> {
 
     const [result] = (await this.knex(this.tableName)
       .insert({
-        id: undefined,
+        id: uuid.v4(),
         ...item,
         createdAt: now,
         updatedAt: now,
