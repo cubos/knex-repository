@@ -6,7 +6,7 @@ export interface BaseModel {
   updatedAt: Date;
 }
 
-type Insert<T extends BaseModel> = Omit<T, "createdAt" | "updatedAt"> & { id?: T["id"] };
+type Insert<T extends BaseModel> = Omit<T, "createdAt" | "updatedAt" | "id"> & { id?: T["id"] };
 type Filter<T extends BaseModel> = Partial<Omit<T, "createdAt" | "updatedAt">>;
 type Update<T extends BaseModel> = Filter<T> & { id: T["id"] };
 
