@@ -40,8 +40,8 @@ export class BaseRepository<T extends BaseModel> {
     return new BaseRepository<T>(knex, this.tableName);
   }
 
-  private select(knex?: Knex.Transaction) {
-    return (knex ?? this.knex)<T>(this.tableName).select();
+  private select() {
+    return this.knex<T>(this.tableName).select();
   }
 
   /**
@@ -72,11 +72,18 @@ export class BaseRepository<T extends BaseModel> {
    * @returns instância dos objetos criados
    */
   async insertAll(items: Array<Insert<T>>) {
-    return this.knex.transaction(async trx => {
-      const repo = this.withTransaction(trx);
+    const now = new Date();
 
-      return Promise.all(items.map(async item => repo.insert(item)));
-    });
+    return (await this.knex(this.tableName)
+      .insert(
+        items.map(item => ({
+          id: uuid.v4(),
+          ...item,
+          createdAt: now,
+          updatedAt: now,
+        })),
+      )
+      .returning("*")) as T[];
   }
 
   /**
@@ -86,8 +93,8 @@ export class BaseRepository<T extends BaseModel> {
    * @param queryBuilder callback síncrono possibilitando adicionar mais parâmetros na condição de busca
    * @returns instância do objeto ou undefined se não encontrado
    */
-  async findOneBy(condition: Filter<T>, queryBuilder: (qb: Knex.QueryBuilder<T>) => unknown = () => undefined) {
-    return this.select().where(condition).where(queryBuilder).first() as Promise<T | undefined>;
+  async findOneBy(condition: Filter<T> | ((qb: Knex.QueryBuilder<T>) => unknown) = {}) {
+    return this.select().where(condition).first() as Promise<T | undefined>;
   }
 
   /**
@@ -99,12 +106,11 @@ export class BaseRepository<T extends BaseModel> {
    * @param queryBuilder callback síncrono possibilitando adicionar mais parâmetros na condição de busca
    * @returns objeto contendo o resultado e configurações da pesquisa
    */
-  async findAllPaginated(page = 1, pageSize = 10, condition: Filter<T> = {}, queryBuilder: (qb: Knex.QueryBuilder<T>) => unknown = () => undefined) {
-    const rowCount = await this.count(condition, queryBuilder);
+  async findAllPaginated(page = 1, pageSize = 10, condition: Filter<T> | ((qb: Knex.QueryBuilder<T>) => unknown) = {}) {
+    const rowCount = await this.count(condition);
 
     const result = (await this.select()
       .where(condition)
-      .where(queryBuilder)
       .limit(pageSize)
       .offset((page - 1) * pageSize)) as T[];
 
@@ -124,8 +130,8 @@ export class BaseRepository<T extends BaseModel> {
    * @param queryBuilder callback síncrono possibilitando adicionar mais parâmetros na condição de busca
    * @returns contagem de objetos
    */
-  async count(condition: Filter<T> = {}, queryBuilder: (qb: Knex.QueryBuilder<T>) => unknown = () => undefined) {
-    const query = this.select().where(condition).where(queryBuilder).count({ count: 1 }).first();
+  async count(condition: Filter<T> | ((qb: Knex.QueryBuilder<T>) => unknown) = {}) {
+    const query = this.select().where(condition).count({ count: 1 }).first();
 
     return parseInt(((await query)?.count ?? "0").toString(), 10);
   }
@@ -146,8 +152,8 @@ export class BaseRepository<T extends BaseModel> {
    * @param queryBuilder callback síncrono possibilitando adicionar mais parâmetros na condição de busca
    * @returns array com a instância dos objetos encontrados
    */
-  async findBy(condition: Filter<T> = {}, queryBuilder: (qb: Knex.QueryBuilder<T>) => unknown = () => undefined) {
-    return this.select().where(condition).where(queryBuilder) as Promise<T[]>;
+  async findBy(condition: Filter<T> | ((qb: Knex.QueryBuilder<T>) => unknown)) {
+    return this.select().where(condition) as Promise<T[]>;
   }
 
   /**
@@ -207,12 +213,12 @@ export class BaseRepository<T extends BaseModel> {
    * @param condition parâmetros dos objetos a serem utilizadas na condição de busca
    * @returns objetos excluídos
    */
-  async deleteBy(condition: Filter<T> = {}, queryBuilder: (qb: Knex.QueryBuilder<T>) => unknown = () => undefined) {
-    return (await this.knex(this.tableName).where(condition).where(queryBuilder).delete().returning("*")) as T[];
+  async deleteBy(condition: Filter<T> | ((qb: Knex.QueryBuilder<T>) => unknown)) {
+    return (await this.knex(this.tableName).where(condition).delete().returning("*")) as T[];
   }
 
   /**
-   * Exclui todos os objetos na tabela e também todo o histórico.
+   * Exclui todos os objetos da tabela.
    */
   async truncate() {
     await this.knex(this.tableName).truncate();
