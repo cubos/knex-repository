@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/cubos/node-knex-repository#readme",
   "dependencies": {
-    "knex": "^0.21.16",
+    "knex": "^0.95.1",
     "lodash": "^4.17.20",
     "uuid": "^8.3.2"
   },
