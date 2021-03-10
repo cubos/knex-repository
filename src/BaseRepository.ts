@@ -1,4 +1,4 @@
-import type Knex from "knex";
+import type { Knex } from "knex";
 import * as uuid from "uuid";
 
 export interface BaseModel {
@@ -89,8 +89,7 @@ export class BaseRepository<T extends BaseModel> {
   /**
    * Obtém a última versão de um objeto através de parâmetro(s) do mesmo
    *
-   * @param condition parâmetros do objeto a serem utilizadas na condição de busca
-   * @param queryBuilder callback síncrono possibilitando adicionar mais parâmetros na condição de busca
+   * @param condition condição de busca através de parâmetros ou com um callback do knex
    * @returns instância do objeto ou undefined se não encontrado
    */
   async findOneBy(condition: Filter<T> | ((qb: Knex.QueryBuilder<T>) => unknown) = {}) {
@@ -126,8 +125,7 @@ export class BaseRepository<T extends BaseModel> {
   /**
    * Obtém a contagem de objetos através de parâmetro(s) do mesmo
    *
-   * @param condition parâmetros do objeto a serem utilizadas na condição de busca
-   * @param queryBuilder callback síncrono possibilitando adicionar mais parâmetros na condição de busca
+   * @param condition condição de busca através de parâmetros ou com um callback do knex
    * @returns contagem de objetos
    */
   async count(condition: Filter<T> | ((qb: Knex.QueryBuilder<T>) => unknown) = {}) {
@@ -148,8 +146,7 @@ export class BaseRepository<T extends BaseModel> {
   /**
    * Obtém a última versão de alguns objetos através de parâmetro(s) dos mesmos
    *
-   * @param condition parâmetros dos objetos a serem utilizadas na condição de busca
-   * @param queryBuilder callback síncrono possibilitando adicionar mais parâmetros na condição de busca
+   * @param condition condição de busca através de parâmetros ou com um callback do knex
    * @returns array com a instância dos objetos encontrados
    */
   async findBy(condition: Filter<T> | ((qb: Knex.QueryBuilder<T>) => unknown)) {
@@ -159,9 +156,8 @@ export class BaseRepository<T extends BaseModel> {
   /**
    * Obtém a última versão de um objeto através do identificador
    *
-   * @param {string} id identificador do objeto
-   * @param {Date} date opcionalmente uma data para realizar consultas na tabela de histórico
-   * @returns {(Promise<T | undefined>)} instância do objeto ou undefined se não encontrado
+   * @param id identificador do objeto
+   * @returns instância do objeto ou undefined se não encontrado
    */
   async get(id: T["id"]): Promise<T | undefined> {
     return this.findOneBy({ id } as Filter<T>);
@@ -210,7 +206,7 @@ export class BaseRepository<T extends BaseModel> {
   /**
    * Exclui múltiplas instâncias de um objeto através de uma condição
    *
-   * @param condition parâmetros dos objetos a serem utilizadas na condição de busca
+   * @param condition condição de busca através de parâmetros ou com um callback do knex
    * @returns objetos excluídos
    */
   async deleteBy(condition: Filter<T> | ((qb: Knex.QueryBuilder<T>) => unknown)) {
