@@ -1,7 +1,6 @@
 import { randomBytes } from "crypto";
 
-import Knex from "knex";
-import { update } from "lodash";
+import { knex } from "knex";
 
 import { BaseRepository } from "../src";
 import type { BaseModel } from "../src/BaseRepository";
@@ -22,15 +21,15 @@ function randomTableName() {
 
 describe("BaseRepository", () => {
   const database = `test_${randomBytes(8).toString("hex")}`;
-  const masterConn = Knex(knexConfig);
-  const knex = Knex({ ...knexConfig, connection: { ...knexConfig.connection, database } });
+  const masterConn = knex(knexConfig);
+  const conn = knex({ ...knexConfig, connection: { ...knexConfig.connection, database } });
 
   beforeAll(async () => {
     await masterConn.raw(`CREATE DATABASE ${database}`);
   });
 
   afterAll(async () => {
-    await knex.destroy();
+    await conn.destroy();
     await masterConn.raw(`DROP DATABASE ${database}`);
     await masterConn.destroy();
   });
@@ -38,7 +37,7 @@ describe("BaseRepository", () => {
   it("inserts, finds, updates and deletes objects", async () => {
     const tableName = randomTableName();
 
-    await BaseRepository.createTable(knex, tableName, table => {
+    await BaseRepository.createTable(conn, tableName, table => {
       table.text("name");
     });
 
@@ -46,7 +45,7 @@ describe("BaseRepository", () => {
       name: string;
     }
 
-    const repo = new BaseRepository<Model>(knex, tableName);
+    const repo = new BaseRepository<Model>(conn, tableName);
 
     expect(await repo.findAll()).toHaveLength(0);
 
@@ -85,7 +84,7 @@ describe("BaseRepository", () => {
   it("allows altering tables", async () => {
     const tableName = randomTableName();
 
-    await BaseRepository.createTable(knex, tableName, table => {
+    await BaseRepository.createTable(conn, tableName, table => {
       table.text("name");
     });
 
@@ -93,9 +92,9 @@ describe("BaseRepository", () => {
       name: string;
     }
 
-    await new BaseRepository<Model1>(knex, tableName).insert({ name: "foo" });
+    await new BaseRepository<Model1>(conn, tableName).insert({ name: "foo" });
 
-    await BaseRepository.alterTable(knex, tableName, table => {
+    await BaseRepository.alterTable(conn, tableName, table => {
       table.integer("age").defaultTo(20);
     });
 
@@ -104,18 +103,18 @@ describe("BaseRepository", () => {
       age: number;
     }
 
-    const [row] = await new BaseRepository<Model2>(knex, tableName).findAll();
+    const [row] = await new BaseRepository<Model2>(conn, tableName).findAll();
 
     expect(row.name).toBe("foo");
     expect(row.age).toBe(20);
 
-    await BaseRepository.dropTable(knex, tableName);
+    await BaseRepository.dropTable(conn, tableName);
   });
 
   it("inserts and deletes many", async () => {
     const tableName = randomTableName();
 
-    await BaseRepository.createTable(knex, tableName, table => {
+    await BaseRepository.createTable(conn, tableName, table => {
       table.integer("value");
     });
 
@@ -123,7 +122,7 @@ describe("BaseRepository", () => {
       value: number;
     }
 
-    const repo = new BaseRepository<Model>(knex, tableName);
+    const repo = new BaseRepository<Model>(conn, tableName);
 
     const objectsToInsert = new Array(10).fill(0).map((_, index) => ({ value: index }));
 
