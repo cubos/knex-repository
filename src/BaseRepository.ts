@@ -1,5 +1,6 @@
+import { randomUUID } from "crypto";
+
 import type { Knex } from "knex";
-import * as uuid from "uuid";
 
 export interface BaseModel {
   id: string;
@@ -55,7 +56,7 @@ export class BaseRepository<T extends BaseModel> {
 
     const [result] = (await this.knex(this.tableName)
       .insert({
-        id: uuid.v4(),
+        id: randomUUID(),
         ...item,
         createdAt: now,
         updatedAt: now,
@@ -77,7 +78,7 @@ export class BaseRepository<T extends BaseModel> {
     return (await this.knex(this.tableName)
       .insert(
         items.map(item => ({
-          id: uuid.v4(),
+          id: randomUUID(),
           ...item,
           createdAt: now,
           updatedAt: now,
