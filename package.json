@@ -28,7 +28,7 @@
     "lodash": "^4.17.21"
   },
   "devDependencies": {
-    "@cubos/eslint-config": "^1.0.597491",
+    "@cubos/eslint-config": "^2.0.631875",
     "@types/jest": "^27.4.1",
     "@types/lodash": "^4.14.181",
     "@types/node": "^14.14.33",
