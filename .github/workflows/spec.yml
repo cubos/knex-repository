@@ -7,15 +7,15 @@ jobs:
     strategy:
       matrix:
         node:
-          - 10
-          - 12
           - 14
-          - 15
+          - 16
+          - 18
         postgres:
           - 10-alpine
           - 11-alpine
           - 12-alpine
           - 13-alpine
+          - 14-alpine
     services:
       postgres:
         image: postgres:${{ matrix.postgres }}
@@ -30,7 +30,7 @@ jobs:
           - 5432:5432
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
       - run: npm install
