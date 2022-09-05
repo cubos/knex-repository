@@ -31,7 +31,7 @@
     "@cubos/eslint-config": "^2.0.631875",
     "@types/jest": "^28.1.4",
     "@types/lodash": "^4.14.182",
-    "@types/node": "^16.11.43",
+    "@types/node": "^18.7.15",
     "jest": "^28.1.2",
     "jest-extended": "^2.0.0",
     "pg": "^8.7.3",
